@@ -5,13 +5,10 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+    plan: free
     envVars:
       - key: DB_PATH
-        value: /data/db.json
+        value: ../../db.json
       - key: JWT_SECRET
         generateValue: true
       - key: VT_API_KEY
