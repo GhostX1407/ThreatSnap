@@ -1,5 +1,6 @@
 // Run with: node backend/src/genai/test-manual.js
-
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { explainThreat } = require('./index.js');
 
 const testCases = [
