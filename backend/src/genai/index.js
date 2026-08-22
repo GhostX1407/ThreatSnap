@@ -1,52 +1,91 @@
+// backend/src/genai/index.js
+
 /**
- * OWNED BY: Person C
- * Do not change the function name or return shape without telling the team.
- *
- * explainThreat(input, score, factors) -> Promise<string>
- *
- * This is currently a STUB returning a templated string so the rest of the
- * backend works end-to-end immediately. Replace the internal logic with a
- * real call to an LLM API (Claude, OpenAI, etc.) using a PRE-DEFINED prompt
- * template (constraint: "All GenAI prompts must be pre-defined and not
- * require training"). Keep the function async and keep the same signature.
- *
- * Example real implementation using the Anthropic API:
- *
- * const PROMPT_TEMPLATE = (input, score, factors) => `
- *   You are a cybersecurity analyst assistant. A threat of type "${input.type}"
- *   with value "${input.value}" was scored ${score}/100 for risk.
- *   Contributing factors: ${factors.join(', ')}.
- *   Write a 1-3 sentence, human-readable explanation of why this is risky
- *   (or not), referencing the factors. Be concise and explainable.
- * `;
- *
- * async function explainThreat(input, score, factors) {
- *   const response = await fetch('https://api.anthropic.com/v1/messages', {
- *     method: 'POST',
- *     headers: {
- *       'Content-Type': 'application/json',
- *       'x-api-key': process.env.LLM_API_KEY,
- *       'anthropic-version': '2023-06-01'
- *     },
- *     body: JSON.stringify({
- *       model: 'claude-sonnet-4-6',
- *       max_tokens: 200,
- *       messages: [{ role: 'user', content: PROMPT_TEMPLATE(input, score, factors) }]
- *     })
- *   });
- *   const data = await response.json();
- *   return data.content[0].text;
- * }
+ * Builds the prompt for the LLM based on the threat indicator
+ */
+function buildPrompt(input, score, factors) {
+  const verdict = score > 66 ? 'HIGH RISK' : score > 33 ? 'MODERATE RISK' : 'LOW RISK';
+  
+  return `You are a cybersecurity threat analyst. A ${input.type} indicator was analyzed.
+
+Indicator: "${input.value}"
+Risk Score: ${score}/100 (${verdict})
+Flagged Factors: ${factors.join(', ')}
+
+Write a concise 1-3 sentence explanation of WHY this indicator received this risk score. Reference the specific factors above. Then add 1 sentence with a recommended action. Be direct and technical — this is for a security analyst.`;
+}
+
+/**
+ * Generates a fallback explanation when the API is unavailable
+ */
+function buildFallback(input, score, factors) {
+  const verdict = score > 66 ? 'HIGH RISK' : score > 33 ? 'MODERATE RISK' : 'LOW RISK';
+  const recommendation = score > 66
+    ? 'Block immediately and investigate.'
+    : score > 33
+    ? 'Monitor closely and verify source.'
+    : 'No immediate action required.';
+  
+  return `This ${input.type} ("${input.value}") was assessed as ${verdict} (score: ${score}/100). Key contributing factors: ${factors.join(', ')}. Recommendation: ${recommendation}`;
+}
+
+/**
+ * Calls the Groq LLM API with timeout protection
+ * Groq uses OpenAI-compatible format (not Anthropic)
+ */
+async function callLLM(prompt, signal) {
+  const apiKey = process.env.LLM_API_KEY;
+  
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-oss-20b',  // Available model on Groq
+      messages: [
+        { role: 'system', content: 'You are a cybersecurity threat analyst. Be concise and specific.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 200,
+      temperature: 0.3
+    }),
+    signal
+  });
+  
+  if (!response.ok) {
+    throw new Error(`LLM API error: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+/**
+ * Main function: Explains a threat indicator using LLM or fallback
  */
 async function explainThreat(input, score, factors) {
-  const { type, value } = input;
-  const verdictWord = score <= 33 ? 'low risk' : score <= 66 ? 'moderate risk' : 'high risk';
-
-  // --- STUB LOGIC - replace with real GenAI call ---
-  return `This ${type} ("${value}") was assessed as ${verdictWord} (score: ${score}/100). ` +
-    `Key contributing factors: ${factors.join(', ')}. This explanation is currently a placeholder ` +
-    `and should be replaced with a real GenAI-generated explanation.`;
-  // --- END STUB LOGIC ---
+  const fallback = buildFallback(input, score, factors);
+  
+  if (!process.env.LLM_API_KEY) {
+    return fallback;
+  }
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    
+    const prompt = buildPrompt(input, score, factors);
+    const explanation = await callLLM(prompt, controller.signal);
+    
+    clearTimeout(timeoutId);
+    return explanation;
+    
+  } catch (error) {
+    console.warn('LLM API unavailable, using fallback:', error.message);
+    return fallback;
+  }
 }
 
 module.exports = { explainThreat };
