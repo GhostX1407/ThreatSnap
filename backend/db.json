@@ -1,0 +1,46 @@
+{
+  "threats": [
+    {
+      "id": "40b8d215",
+      "type": "url",
+      "value": "https://www.google.com/",
+      "score": 50,
+      "verdict": "medium_risk",
+      "explanation": "This url (\"https://www.google.com/\") was assessed as moderate risk (score: 50/100). Key contributing factors: no strong risk indicators detected. This explanation is currently a placeholder and should be replaced with a real GenAI-generated explanation.",
+      "factors": [
+        "no strong risk indicators detected"
+      ],
+      "confidence": 55,
+      "source": "heuristic",
+      "timestamp": "2026-08-22T12:30:22.908Z"
+    },
+    {
+      "id": "27b3d3ae",
+      "type": "url",
+      "value": "https://www.google.com/",
+      "score": 50,
+      "verdict": "medium_risk",
+      "explanation": "This url (\"https://www.google.com/\") was assessed as moderate risk (score: 50/100). Key contributing factors: no strong risk indicators detected. This explanation is currently a placeholder and should be replaced with a real GenAI-generated explanation.",
+      "factors": [
+        "no strong risk indicators detected"
+      ],
+      "confidence": 55,
+      "source": "heuristic",
+      "timestamp": "2026-08-22T12:31:16.640Z"
+    }
+  ],
+  "audit": [
+    {
+      "user": "analyst1",
+      "action": "threat_analyzed",
+      "resource_id": "40b8d215",
+      "timestamp": "2026-08-22T12:30:22.908Z"
+    },
+    {
+      "user": "analyst1",
+      "action": "threat_analyzed",
+      "resource_id": "27b3d3ae",
+      "timestamp": "2026-08-22T12:31:16.640Z"
+    }
+  ]
+}
